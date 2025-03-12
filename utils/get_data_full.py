@@ -2,10 +2,10 @@ import requests
 import json
 import pandas as pd
 import datetime as dt
-from config import API_SECRET,API_KEY
+from utils.config import API_SECRET,API_KEY
 from binance import Client
-from get_data_binance import getbinancedaily
-from get_data_bitstamp import getbitstampdaily
+from utils.get_data_binance import getbinance
+from utils.get_data_bitstamp import getbitstamp
 from math import *
 import numpy as np
 from ts2vg import NaturalVG
@@ -81,19 +81,28 @@ def Bollinger(df, period, price, delta):
     Top = Mid + 2*Delta
     Bot = Mid - 2*Delta
     return Top, Bot
+   
+def get_data(ticker):
 
-if __name__ == '__main__' :
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--ticker', type=str, default= 'AVAX')
-    args = parser.parse_args()
-    ticker = args.ticker
-    dfBn = getbinancedaily(sym=f'{ticker}USDT')
-    dfBt = getbitstampdaily(sym=f'{ticker.lower()}usd')
+    dfBn = getbinance(sym=f'{ticker}BTC')
+    dfBt = getbitstamp(sym=f'{ticker.lower()}btc')
     dfBn.to_csv('data-binance.csv', index = False)
     dfBt.to_csv('data-bitstamp.csv', index = False)
-    dfBn = pd.read_csv('data-binance.csv')
+    dfBn = pd.read_csv('data-binance.csv').set_index('date')
     dfBt = pd.read_csv('data-bitstamp.csv')
+    dfBt.rename(columns = {'timestamp':'date'}, inplace=True)
+    dfBt = dfBt.set_index('date')
+
+    if len(dfBn.index) > len(dfBt.index):
+        dfBt = dfBt.reindex(index=dfBn.index, fill_value=0)
+        dates = dfBn.index
+        print('indexed on binance')
+    elif len(dfBt.index) > len(dfBn.index):
+        dfBn = dfBn.reindex(index=dfBt.index, fill_value=0)
+        dates = dfBt.index
+    else:
+        dates = dfBn.index
+        
     df = pd.DataFrame()
 
     df['open'] = (dfBn['open']*dfBn['volume']+dfBt['open']*dfBt['volume'])/(dfBt['volume']+dfBn['volume'])
@@ -108,7 +117,7 @@ if __name__ == '__main__' :
     price_open = df['open'].values
     price_high = high
     price_low = low
-    ADX = ADXIndicator(df['high'], df['low'], df['close'], window = 14, fillna = True)
+    ADX = ADXIndicator(df['high'], df['low'], df['close'], window = 14, fillna = False)
     df['ADX'] = ADX.adx()
 
 
@@ -119,7 +128,6 @@ if __name__ == '__main__' :
     df['RSI_14'] = RSI(df, 14, price, delta)
 
    
-    print(df.head)
         
     # r = requests.get(url = 'https://api.alternative.me/fng/', params = {'limit': 0, 'date_format': ''})
     # r = r.json()['data']
@@ -137,11 +145,12 @@ if __name__ == '__main__' :
     # print(dfG.index)
 
 
-    df['date'] = dfBn['date']
-
+    # df['date'] = dates
+    # print(df['date'])
+    df = df.dropna()
 
     # df['Boll_Top'], df['Boll_Bot'] = Bollinger(df, 24, price, delta)
-    df = df.dropna()
+    # df = df.dropna()
     # df = df.iloc[-(len(dfG.index)-27):]
     # df['sentiment'] = dfG['value'].values[:-27]
     # print(dfG['value'])
@@ -149,18 +158,18 @@ if __name__ == '__main__' :
     # cols2 = ['date', 'price', 'price_high', 'price_low', 'price_open', 'close']
     # df2 = df[cols2]
 
-    cols = ['date', 'volume', 'vol', 'RSI_14', 'EMA_100', 'SMA_50', 'ADX', 'open', 'high', 'low', 'close']
+    cols = ['volume', 'vol', 'RSI_14', 'EMA_100', 'SMA_50', 'ADX', 'open', 'high', 'low', 'close']
     df = df[cols]
 
 
-    df.to_parquet(f'Data_{ticker}_Daily.parquet')
+    df.to_parquet(f'./data/{ticker}_4hours.parquet')
     os.remove('data-binance.csv')
     os.remove('data-bitstamp.csv')
     # df.to_csv("/home/owen/Documents/NeurIPS2023-One-Fits-All/Long-term_Forecasting/datasets/BTC/BTC_Daily_fracdiffnodata.csv", index=False)
     # df.to_csv("/home/owen/Documents/NeurIPS2023-One-Fits-All/Long-term_Forecasting/datasets/BTC/BTC_DailyfracdiffADF_price.csv", index=False)
     # df.to_csv("/home/owen/Documents/NeurIPS2023-One-Fits-All/Long-term_Forecasting/datasets/BTC/BTC_Daily_sentiment.csv", index=False)
     # df2.to_csv("/home/owen/Documents/NeurIPS2023-One-Fits-All/Long-term_Forecasting/datasets/BTC/BTC_DailyfracdiffADF.csv", index=False)
-    
+    return df
 
 
 

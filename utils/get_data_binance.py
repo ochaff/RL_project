@@ -1,4 +1,4 @@
-from config import API_SECRET,API_KEY
+from utils.config import API_SECRET,API_KEY
 from binance import Client
 import datetime as dt
 import pandas as pd
@@ -11,16 +11,30 @@ def df_column_switch(df, column1, column2):
     df = df[i]
     return df
 
-def getbinance(start = "18 Aug 2017", sym = "ETHUSDT"):
+def getbinance(start = "18 Aug 2017", sym = "ETHUSDT", timestep = '4hourly'):
+    assert timestep in ['daily', 'hourly', '4hourly', 'weekly']
+    if timestep == 'daily' :
+        mult = 24
+        kline = Client.KLINE_INTERVAL_1DAY
+    if timestep == 'hourly' :
+        mult = 1
+        kline = Client.KLINE_INTERVAL_1HOUR
+    if timestep == '4hourly' :
+        mult = 4
+        kline = Client.KLINE_INTERVAL_4HOUR
+    if timestep == 'weekly' :
+        mult = 24*7
+        kline = Client.KLINE_INTERVAL_1WEEK
+
     client = Client(API_KEY, API_SECRET)
-    klines = client.get_historical_klines(sym, Client.KLINE_INTERVAL_1HOUR, start)
+    klines = client.get_historical_klines(sym, kline, start)
     df = pd.DataFrame(klines)
     df = df.iloc[:,0:6]
     df.columns = ['date', 'open', 'high', 'low', 'close', 'volume']
     df.index = [dt.datetime.fromtimestamp(int(x)/1000) for x in df.date]
 
     L = df['date'].values
-    L = list(range(L[0],L[-1]+1, 3600*1000))
+    L = list(range(L[0],L[-1]+1, mult*3600*1000))
     for i,a in enumerate(L) :
         L[i] = dt.datetime.fromtimestamp(a/1000)
     df = df.reindex(L,method="ffill")

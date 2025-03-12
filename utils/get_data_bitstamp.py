@@ -14,16 +14,16 @@ def df_column_switch(df, column1, column2):
 def getbitstampdaily(sym = 'ethusd', start = "2017-08-17"):
 
     end = dt.datetime.now()
-    dates = pd.date_range(start, end, freq = "1000D", inclusive="both")
+    dates = pd.date_range(start, end, freq = "1000H", inclusive="both")
     dates  = [ int(x.value/10**9) for x in list(dates)] 
-    dates.append(dates[-1]+24*3600*1000)
+    dates.append(dates[-1]+4*3600*1000)
 
     url = f'https://www.bitstamp.net/api/v2/ohlc/{sym}/'
     Data = []
 
     for S,E in zip(dates,dates[1:]):
         params = {
-            "step": 86400,
+            "step": 4*3600,
             "limit":1000,
             "start":S,
             "end":E,
@@ -61,19 +61,19 @@ def getbitstampdaily(sym = 'ethusd', start = "2017-08-17"):
 
 
 
-def getbitstamp(sym = 'btcusd', start = "2017-08-17"):
+def getbitstamp(sym = 'btcusd', start = "2017-08-18"):
 
     end = dt.datetime.now()
-    dates = pd.date_range(start, end, freq = "1000H", inclusive="both")
+    dates = pd.date_range(start, end, freq = "4000H", inclusive="both")
     dates  = [ int(x.value/10**9) for x in list(dates)] 
-    dates.append(dates[-1]+3600*1000)
+    dates.append(dates[-1]+3600*4000)
 
     url = f'https://www.bitstamp.net/api/v2/ohlc/{sym}/'
     Data = []
 
     for S,E in zip(dates,dates[1:]):
         params = {
-            "step":3600,
+            "step":4*3600,
             "limit":1000,
             "start":S,
             "end":E,
